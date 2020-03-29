@@ -13,6 +13,9 @@
 //TODO internal commands
 //TODO cool colours
 //TODO command history
+//TODO arrowkey command history
+//TODO CLEANING
+//TODO get rid of that stoopid ISO warning
 
 char *read_line();
 char **parse_line(char *line, int *counter);
@@ -21,34 +24,9 @@ int shell_exit(char **args);
 void print_tokens(char **tokens, int counter);
 int check_internal_commands(char **args, int arg_count);
 void print_help();
-void save_commands(char **array, int *cmd_count, char *line){
-  if(strcmp(line, "") != 0 && line[0] != '\0'){
-    *cmd_count += 1;
-    printf("cmd_count:%d\n", *cmd_count);
-
-    array[*cmd_count - 1] = malloc(BUFF_SIZE * sizeof(char));
-    if (!array){
-      fprintf(stderr, "Allocation error\n");
-      exit(EXIT_FAILURE);
-    }
-
-    strcpy(array[*cmd_count - 1], line);
-  }
-}
-void realloc_2d_arr(char ***array_ptr, int *cmd_buff_size_ptr){
-  printf("\n\nREALOKACJA KURWO\n\n");
-  *cmd_buff_size_ptr *= 2;
-  *array_ptr = realloc(*array_ptr, *cmd_buff_size_ptr * sizeof(char *));
-  if (!(*array_ptr)) {
-    fprintf(stderr, "Allocation error\n");
-    exit(EXIT_FAILURE);
-  }
-}
-void print_history(char **array, int cmd_count){
-  printf("ADRES     - indeks - slowo\n");
-  for (int i = 0; i < cmd_count; i++)
-    printf("%d - %d - %s\n",&array[i], i, array[i]);
-}
+void save_commands(char **array, int *cmd_count, char *line);
+void realloc_2d_arr(char ***array_ptr, int *cmd_buff_size_ptr);
+void print_history(char **array, int cmd_count);
 
 
 void loop(){
@@ -71,6 +49,8 @@ void loop(){
     //printf("%s> ", getcwd(tmp, 128));
     line = read_line();
     
+    printf("buffsize:%d\n", cmd_buff_size);
+
     if (cmd_count > cmd_buff_size){
       realloc_2d_arr(saved_commands_ptr, cmd_buff_size_ptr);
     }
@@ -79,15 +59,15 @@ void loop(){
 
     tokens = parse_line(line, &counter);
 
-    //print_tokens(tokens, counter);
-    if (counter < 1) continue;
+    if (counter < 1)
+      continue;
 
     status = shell_execute(tokens, counter);
+
     switch(status){
       case (2):
         print_history(saved_commands, cmd_count);
         status = 1;
-
     }
 
     free(line);
@@ -250,7 +230,38 @@ int check_internal_commands(char **args, int arg_count){
 void print_help(){
   printf("Available commands:\n");
   printf("cd [arg] - changes your working dir\n");
+  printf("history - prints your command history\n");
   printf("xD - check it out!\n");
   printf("exit - exits\n");
 }
 
+void save_commands(char **array, int *cmd_count, char *line){
+  if(strcmp(line, "") != 0 && strcmp(line, "history") != 0&& line[0] != '\0'){
+    *cmd_count += 1;
+
+    array[*cmd_count - 1] = malloc(BUFF_SIZE * sizeof(char));
+    if (!array){
+      fprintf(stderr, "Allocation error\n");
+      exit(EXIT_FAILURE);
+    }
+
+    strcpy(array[*cmd_count - 1], line);
+  }
+}
+
+void realloc_2d_arr(char ***array_ptr, int *cmd_buff_size_ptr){
+  printf("\n\nREALOKACJA KURWO\n\n");
+  *cmd_buff_size_ptr *= 2;
+  *array_ptr = realloc(*array_ptr, *cmd_buff_size_ptr * sizeof(char *));
+  if (!(*array_ptr)) {
+    fprintf(stderr, "Allocation error\n");
+    exit(EXIT_FAILURE);
+  }
+}
+
+void print_history(char **array, int cmd_count){
+  printf("cmd_count:%d\n", cmd_count);
+  printf("ADRES     - indeks - slowo\n");
+  for (int i = 0; i < cmd_count; i++)
+    printf("%d - %d - %s\n", &array[i], i, array[i]);
+}
