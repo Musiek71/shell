@@ -5,13 +5,14 @@
 #include <ctype.h>
 #include <sys/wait.h>
 
-#define BUFF_SIZE 128
+#define BUFF_SIZE 8
 #define RED "\e[91m"
 #define RESET "\e[0m"
 
-//TODO make more use of chdir (internal cmd)
+//TODO make more use of chdir
 //TODO internal commands
 //TODO cool colours
+//TODO command history
 
 char *read_line();
 char **parse_line(char *line, int *counter);
@@ -20,20 +21,56 @@ int shell_exit(char **args);
 void print_tokens(char **tokens, int counter);
 int check_internal_commands(char **args, int arg_count);
 void print_help();
+void save_commands(char **array, int *cmd_count, char *line, int *cmd_buff_size){
+  *cmd_count += 1;
+  printf("cmd_count:%d\n", *cmd_count);
 
+  array[*cmd_count - 1] = malloc(BUFF_SIZE * sizeof(char));
+  if (!array){
+    fprintf(stderr, "Allocation error\n");
+    exit(EXIT_FAILURE);
+  }
+
+  strcpy(array[*cmd_count - 1], line);
+
+  for (int i = 0; i < *cmd_count; i++) printf("%d %d - %s\n",&array[i], i, array[i]);
+}
+void realloc_2d_arr(char ***array_ptr, int *cmd_buff_size_ptr){
+  *cmd_buff_size_ptr *= 2;
+  *array_ptr = realloc(*array_ptr, *cmd_buff_size_ptr * sizeof(char *));
+  if (!(*array_ptr)) {
+    fprintf(stderr, "Allocation error\n");
+    exit(EXIT_FAILURE);
+  }
+}
 
 
 void loop(){
   char *line;
-  char ** tokens;
+  char **saved_commands = malloc(BUFF_SIZE * sizeof(char *));
+  char **tokens;
+  char ***saved_commands_ptr = &saved_commands;
   int counter;
+  int cmd_count = 0;
+  int cmd_buff_size = BUFF_SIZE;
+  int *cmd_buff_size_ptr = &cmd_buff_size;
+  int *cmd_count_ptr = &cmd_count;
   int status = 1;
   char tmp[128];
 
 
+
   do {
-    printf("%s%s>%s ", RED, getcwd(tmp, 128), RESET);
+    //printf("%s%s>%s ", RED, getcwd(tmp, 128), RESET);
+    printf("%s> ", getcwd(tmp, 128));
     line = read_line();
+    
+    if (cmd_count > cmd_buff_size){
+      realloc_2d_arr(saved_commands_ptr, cmd_buff_size_ptr);
+    }
+    save_commands(saved_commands, cmd_count_ptr, line, cmd_buff_size_ptr);
+
+
     tokens = parse_line(line, &counter);
 
     //print_tokens(tokens, counter);
@@ -140,8 +177,7 @@ int shell_execute(char **args, int arg_count){
     exit(EXIT_FAILURE);
 
   } else if (cpid < 0)
-    printf(RED "Error forking"
-      RESET "\n");
+    printf("Error forking\n");
   else {
     waitpid(cpid, &process_status, WUNTRACED);
   }
@@ -163,6 +199,9 @@ int check_internal_commands(char **args, int arg_count){
   char tmp[128];
 
   if (strcmp(args[0], "exit") == 0) {
+    return shell_exit(args);
+  }
+  if (strcmp(args[0], "history") == 0) {
     return shell_exit(args);
   }
   else if (strcmp(args[0], "help") == 0){
@@ -197,9 +236,8 @@ int check_internal_commands(char **args, int arg_count){
 
 void print_help(){
   printf("Available commands:\n");
-  printf("cwd - shows your current working dir\n");
   printf("cd [arg] - changes your working dir\n");
-  printf("exit - exits\n");
   printf("xD - check it out!\n");
-  printf("All external commands also do work\n");
+  printf("exit - exits\n");
 }
+
