@@ -5,7 +5,7 @@
 #include <ctype.h>
 #include <sys/wait.h>
 
-#define BUFF_SIZE 8
+#define BUFF_SIZE 64
 #define RED "\e[91m"
 #define RESET "\e[0m"
 
@@ -16,6 +16,7 @@
 //TODO arrowkey command history
 //TODO CLEANING
 //TODO get rid of that stoopid ISO warning
+//TODO get another BUFF_SIZE definition to distinguish the line buffer
 
 char *read_line();
 char **parse_line(char *line, int *counter);
@@ -48,8 +49,9 @@ void loop(){
     printf("%s%s>%s ", RED, getcwd(tmp, 128), RESET);
     //printf("%s> ", getcwd(tmp, 128));
     line = read_line();
-    
-    printf("buffsize:%d\n", cmd_buff_size);
+
+    //DEBUGGING
+    //printf("buffsize:%d\n", cmd_buff_size);
 
     if (cmd_count > cmd_buff_size){
       realloc_2d_arr(saved_commands_ptr, cmd_buff_size_ptr);
@@ -189,7 +191,6 @@ void print_tokens(char **tokens, int counter){
 }
 
 int check_internal_commands(char **args, int arg_count){
-  char tmp[128];
 
   if (strcmp(args[0], "exit") == 0) {
     return shell_exit(args);
@@ -201,16 +202,11 @@ int check_internal_commands(char **args, int arg_count){
     print_help();
     return 1;
   } 
-  else if (strcmp(args[0], "cwd") == 0){
-    printf("%s\n", getcwd(tmp, 128));
-    return 1;
-  } 
   else if (strcmp(args[0], "cd") == 0){
     if (chdir(args[1]) != 0){
       fprintf(stderr, "Failed to chdir to \"%s\"\n", args[1]);
       //TODO include errno
     }
-    printf("%s\n", getcwd(tmp, 128));
     return 1;
   }
   else if (strcmp(args[0], "xD") == 0){
