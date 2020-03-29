@@ -6,12 +6,12 @@
 #include <sys/wait.h>
 
 #define BUFF_SIZE 128
-#define RED "\033[0;31m"
+#define RED "\e[91m"
 #define RESET "\e[0m"
 
-//TODO make use of chdir (internal cmd)
+//TODO make more use of chdir (internal cmd)
 //TODO internal commands
-//TODO execs
+//TODO cool colours
 
 char *read_line();
 char **parse_line(char *line, int *counter);
@@ -28,9 +28,11 @@ void loop(){
   char ** tokens;
   int counter;
   int status = 1;
+  char tmp[128];
+
 
   do {
-    printf("%s>:%s ", RED, RESET);
+    printf("%s%s>%s ", RED, getcwd(tmp, 128), RESET);
     line = read_line();
     tokens = parse_line(line, &counter);
 
@@ -198,6 +200,6 @@ void print_help(){
   printf("cwd - shows your current working dir\n");
   printf("cd [arg] - changes your working dir\n");
   printf("exit - exits\n");
-  printf("xD - check it out!");
+  printf("xD - check it out!\n");
   printf("All external commands also do work\n");
 }
