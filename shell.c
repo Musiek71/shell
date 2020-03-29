@@ -21,27 +21,33 @@ int shell_exit(char **args);
 void print_tokens(char **tokens, int counter);
 int check_internal_commands(char **args, int arg_count);
 void print_help();
-void save_commands(char **array, int *cmd_count, char *line, int *cmd_buff_size){
-  *cmd_count += 1;
-  printf("cmd_count:%d\n", *cmd_count);
+void save_commands(char **array, int *cmd_count, char *line){
+  if(strcmp(line, "") != 0 && line[0] != '\0'){
+    *cmd_count += 1;
+    printf("cmd_count:%d\n", *cmd_count);
 
-  array[*cmd_count - 1] = malloc(BUFF_SIZE * sizeof(char));
-  if (!array){
-    fprintf(stderr, "Allocation error\n");
-    exit(EXIT_FAILURE);
+    array[*cmd_count - 1] = malloc(BUFF_SIZE * sizeof(char));
+    if (!array){
+      fprintf(stderr, "Allocation error\n");
+      exit(EXIT_FAILURE);
+    }
+
+    strcpy(array[*cmd_count - 1], line);
   }
-
-  strcpy(array[*cmd_count - 1], line);
-
-  for (int i = 0; i < *cmd_count; i++) printf("%d %d - %s\n",&array[i], i, array[i]);
 }
 void realloc_2d_arr(char ***array_ptr, int *cmd_buff_size_ptr){
+  printf("\n\nREALOKACJA KURWO\n\n");
   *cmd_buff_size_ptr *= 2;
   *array_ptr = realloc(*array_ptr, *cmd_buff_size_ptr * sizeof(char *));
   if (!(*array_ptr)) {
     fprintf(stderr, "Allocation error\n");
     exit(EXIT_FAILURE);
   }
+}
+void print_history(char **array, int cmd_count){
+  printf("ADRES     - indeks - slowo\n");
+  for (int i = 0; i < cmd_count; i++)
+    printf("%d - %d - %s\n",&array[i], i, array[i]);
 }
 
 
@@ -61,14 +67,14 @@ void loop(){
 
 
   do {
-    //printf("%s%s>%s ", RED, getcwd(tmp, 128), RESET);
-    printf("%s> ", getcwd(tmp, 128));
+    printf("%s%s>%s ", RED, getcwd(tmp, 128), RESET);
+    //printf("%s> ", getcwd(tmp, 128));
     line = read_line();
     
     if (cmd_count > cmd_buff_size){
       realloc_2d_arr(saved_commands_ptr, cmd_buff_size_ptr);
     }
-    save_commands(saved_commands, cmd_count_ptr, line, cmd_buff_size_ptr);
+    save_commands(saved_commands, cmd_count_ptr, line);
 
 
     tokens = parse_line(line, &counter);
@@ -77,6 +83,12 @@ void loop(){
     if (counter < 1) continue;
 
     status = shell_execute(tokens, counter);
+    switch(status){
+      case (2):
+        print_history(saved_commands, cmd_count);
+        status = 1;
+
+    }
 
     free(line);
     free(tokens);
@@ -166,6 +178,7 @@ int shell_execute(char **args, int arg_count){
   switch (flag){
     case (-1): return 0;
     case (1): return 1;
+    case (2): return 2;
   }
 
 
@@ -202,7 +215,7 @@ int check_internal_commands(char **args, int arg_count){
     return shell_exit(args);
   }
   if (strcmp(args[0], "history") == 0) {
-    return shell_exit(args);
+    return 2;
   }
   else if (strcmp(args[0], "help") == 0){
     print_help();
