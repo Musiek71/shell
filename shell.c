@@ -5,7 +5,7 @@
 #include <ctype.h>
 #include <sys/wait.h>
 
-#define BUFF_SIZE 64
+#define BUFF_SIZE 128
 #define RED "\e[91m"
 #define RESET "\e[0m"
 
@@ -37,18 +37,26 @@ void loop(){
   char ***saved_commands_ptr = &saved_commands;
   int counter;
   int cmd_count = 0;
+  int *cmd_count_ptr = &cmd_count;
   int cmd_buff_size = BUFF_SIZE;
   int *cmd_buff_size_ptr = &cmd_buff_size;
-  int *cmd_count_ptr = &cmd_count;
   int status = 1;
+  int saved_commands_index;
   char tmp[128];
 
 
 
-  do {
+  do{
     printf("%s%s>%s ", RED, getcwd(tmp, 128), RESET);
     //printf("%s> ", getcwd(tmp, 128));
-    line = read_line();
+    switch (status){
+      case (3):
+        line = saved_commands[saved_commands_index];
+        status = 1;
+        break;
+      default:
+        line = read_line();
+    }
 
     //DEBUGGING
     //printf("buffsize:%d\n", cmd_buff_size);
@@ -60,16 +68,22 @@ void loop(){
 
 
     tokens = parse_line(line, &counter);
+    print_tokens(tokens,counter);
 
     if (counter < 1)
       continue;
 
     status = shell_execute(tokens, counter);
 
-    switch(status){
+    switch (status){
       case (2):
         print_history(saved_commands, cmd_count);
         status = 1;
+        break;
+      case (3):
+        sscanf(tokens[2], "%d", &saved_commands_index);
+        status = 3;
+        break;
     }
 
     free(line);
@@ -88,7 +102,7 @@ char *read_line() {
   char *buffer = malloc(sizeof(char) * buffsize);
   int c;
 
-  if (!buffer) {
+  if (!buffer){
     fprintf(stderr, "Allocation error\n");
     exit(EXIT_FAILURE);
   }
@@ -158,9 +172,10 @@ int shell_execute(char **args, int arg_count){
 
   flag = check_internal_commands(args, arg_count);
   switch (flag){
-    case (-1): return 0;
-    case (1): return 1;
-    case (2): return 2;
+    case (-1): return 0; //exit
+    case (1): return 1; //internal command executed
+    case (2): return 2; //print history
+    case (3): return 3; //use command from history
   }
 
 
@@ -196,7 +211,13 @@ int check_internal_commands(char **args, int arg_count){
     return shell_exit(args);
   }
   if (strcmp(args[0], "history") == 0) {
-    return 2;
+    if (arg_count >1) {
+      if (strcmp(args[1], "-i") == 0 && arg_count == 3)
+        return 3;
+    }
+    else 
+      return 2;
+    
   }
   else if (strcmp(args[0], "help") == 0){
     print_help();
@@ -232,11 +253,11 @@ void print_help(){
 }
 
 void save_commands(char **array, int *cmd_count, char *line){
-  if(strcmp(line, "") != 0 && strcmp(line, "history") != 0&& line[0] != '\0'){
+  if(strcmp(line, "") != 0 && strcmp(line, "history") != 0 && line[0] != '\0'){
     *cmd_count += 1;
 
     array[*cmd_count - 1] = malloc(BUFF_SIZE * sizeof(char));
-    if (!array){
+    if (!array) {
       fprintf(stderr, "Allocation error\n");
       exit(EXIT_FAILURE);
     }
@@ -246,7 +267,6 @@ void save_commands(char **array, int *cmd_count, char *line){
 }
 
 void realloc_2d_arr(char ***array_ptr, int *cmd_buff_size_ptr){
-  printf("\n\nREALOKACJA KURWO\n\n");
   *cmd_buff_size_ptr *= 2;
   *array_ptr = realloc(*array_ptr, *cmd_buff_size_ptr * sizeof(char *));
   if (!(*array_ptr)) {
@@ -257,7 +277,7 @@ void realloc_2d_arr(char ***array_ptr, int *cmd_buff_size_ptr){
 
 void print_history(char **array, int cmd_count){
   printf("cmd_count:%d\n", cmd_count);
-  printf("ADRES     - indeks - slowo\n");
+  printf("ADRES      - indeks - slowo\n");
   for (int i = 0; i < cmd_count; i++)
-    printf("%d - %d - %s\n", &array[i], i, array[i]);
+    printf("%d - %d     - %s\n", &array[i], i, array[i]);
 }
